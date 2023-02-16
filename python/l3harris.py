@@ -14,7 +14,7 @@ def parse_args(args=None):
     parser.add_argument("--procs", "--processes", action="store_true")
     parser.add_argument("--mac", action="store_true")
     parser.add_argument("-d", "--dir", default=".")
-    parser.add_argument("-r", "--recurse", action="set_true")
+    parser.add_argument("-r", "--recurse", action="store_true")
     parser.add_argument("-i", "--ifname", default="eth0")
     return parser.parse_args(args)
 
@@ -26,18 +26,17 @@ def collect_files(directory: str = ".", recursive: bool = False) -> List[Path]:
 
 
 def collect_procs() -> List[Process]:
-    return Process(1).get_children(recursive=True)
+    return Process(1).children(recursive=True)
 
 
 def get_mac_address(ifname: str = "eth0") -> str:
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    info = ioctl(s.fileno(), 0x8927, struct.pack("256s", bytes(ifname, "utf-8")[:15]))
-    return ":".join("%02x" % b for b in info[18:24])
-
+    with open(Path("/sys/class/net") / ifname / "address") as f:
+        mac_addr = f.read().strip()
+    return mac_addr
 
 def main(files, procs, mac, directory=".", ifname="eth0", recurse=False):
     if files:
-        print(collect_files(directory, recurse))
+        print([str(file) for file in collect_files(directory, recurse)])
     if procs:
         print(collect_procs())
     if mac:
